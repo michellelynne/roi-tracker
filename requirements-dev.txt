@@ -1,0 +1,4 @@
+-r src/success/requirements.txt
+pytest
+flake8
+boto3

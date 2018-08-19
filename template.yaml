@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion : "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: A serverless stack using API Gateway, Lambda, DynamoDB
+
+Parameters:
+  StageNameParameter:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - qa
+      - prod
+    Description: Enter stage name, one of dev, qa, or prod. Default is dev.
+  ServiceNameParameter:
+    Type: String
+    Default: roi-tracker
+    AllowedValues:
+      - roi-tracker
+    Description: The service name.
+
+Resources:
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${ServiceNameParameter}-${StageNameParameter}-tracker"
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  TrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ServiceNameParameter}-${StageNameParameter}-success"
+      Runtime: python3.6
+      Handler: success_lambda.lambda_handler
+      CodeUri: ./src/success/build
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DynamoDBTable
+      Events:
+        GetResoureApiEndpoint:
+          Type: Api
+          Properties:
+            Path: /success/{id}
+            Method: GET
+        PostApiEndpoint:
+          Type: Api
+          Properties:
+            Path: /successes
+            Method: POST
+        GetApiEndpoint:
+          Type: Api
+          Properties:
+            Path: /successes
+            Method: GET
+        ReportApiEndpoint:
+          Type: Api
+          Properties:
+            Path: /reports
+            Method: GET
+      Policies:
+        -
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt "DynamoDBTable.Arn"
+
+Outputs:
+
+    SuccessApi:
+      Description: "Success API Gateway endpoint URL "
+      Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageNameParameter}/success/"
+
+    TrackerFunction:
+      Description: "Success Lambda Function ARN"
+      Value: !GetAtt TrackerFunction.Arn

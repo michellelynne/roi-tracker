@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A serverless stack using API Gateway, Lambda, DynamoDB
+Outputs:
+  SuccessApi:
+    Description: 'Success API Gateway endpoint URL '
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageNameParameter}/success/
+  TrackerFunction:
+    Description: Success Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - TrackerFunction
+      - Arn
+Parameters:
+  ServiceNameParameter:
+    AllowedValues:
+    - roi-tracker
+    Default: roi-tracker
+    Description: The service name.
+    Type: String
+  StageNameParameter:
+    AllowedValues:
+    - dev
+    - qa
+    - prod
+    Default: dev
+    Description: Enter stage name, one of dev, qa, or prod. Default is dev.
+    Type: String
+Resources:
+  DynamoDBTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: N
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName:
+        Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-tracker
+    Type: AWS::DynamoDB::Table
+  TrackerFunction:
+    Properties:
+      CodeUri: s3://mbrenner-roi-tracker/5945493a4255984b560f07f28c946320
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: DynamoDBTable
+      Events:
+        GetApiEndpoint:
+          Properties:
+            Method: GET
+            Path: /success
+          Type: Api
+        PostApiEndpoint:
+          Properties:
+            Method: POST
+            Path: /success
+          Type: Api
+      FunctionName:
+        Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-success
+      Handler: success_lambda.lambda_handler
+      Policies:
+      - Statement:
+        - Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          Effect: Allow
+          Resource:
+            Fn::GetAtt:
+            - DynamoDBTable
+            - Arn
+        Version: '2012-10-17'
+      Runtime: python3.6
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31
