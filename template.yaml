@@ -49,6 +49,7 @@ Resources:
           Properties:
             Path: /success/{id}
             Method: GET
+            RestApiId:
         PostApiEndpoint:
           Type: Api
           Properties:
