@@ -1,4 +1,4 @@
-import json
+import simplejson as json
 import uuid
 
 import pytest
@@ -15,6 +15,7 @@ class MockLambdaContext:
 @pytest.fixture()
 def achievement():
     return {
+        'id': 1,
         'innovation': 'Created script to reduce database costs.',
         'cost': '500',
         'duration': 0,
@@ -89,8 +90,76 @@ def api_gateway_post_event():
 
 class TestSuccessLambda:
 
-    def test_success_lambda_post_handler(self, achievement, api_gateway_post_event):
+    def test_success_lambda_post_returns_200(self, api_gateway_post_event, achievement):
         context = MockLambdaContext()
-        api_gateway_post_event['body'] = achievement
+        api_gateway_post_event['body'] = json.dumps(achievement)
         response = success_lambda.lambda_handler(api_gateway_post_event, context)
         assert response['statusCode'] == 200
+
+    def test_success_lambda_get_with_id_returns_success(self, api_gateway_post_event, achievement):
+        # POST
+        context = MockLambdaContext()
+        api_gateway_post_event['body'] = json.dumps(achievement)
+        success_lambda.lambda_handler(api_gateway_post_event, context)
+
+        # GET
+        api_gateway_post_event['path'] = '/successes/{id}'.format(**achievement)
+        api_gateway_post_event['pathParameters'] = {'ID': achievement['id']}
+        api_gateway_post_event['httpMethod'] = 'GET'
+        response = success_lambda.lambda_handler(api_gateway_post_event, context)
+        return_body = json.loads(response['body'])
+        assert response['statusCode'] == 200
+        assert return_body['id'] == api_gateway_post_event['pathParameters']['ID']
+
+    def test_success_lambda_get_all_returns_success(self, api_gateway_post_event, achievement):
+        # POST
+        context = MockLambdaContext()
+        api_gateway_post_event['body'] = json.dumps(achievement)
+        success_lambda.lambda_handler(api_gateway_post_event, context)
+
+        # GET
+        api_gateway_post_event['path'] = '/successes'
+        api_gateway_post_event['httpMethod'] = 'GET'
+        response = success_lambda.lambda_handler(api_gateway_post_event, context)
+        return_body = json.loads(response['body'])
+        assert response['statusCode'] == 200
+        assert return_body[0]['id'] == 1
+
+    def test_success_lambda_put_handler_returns_200(self, api_gateway_post_event, achievement):
+        # POST
+        context = MockLambdaContext()
+        api_gateway_post_event['body'] = json.dumps(achievement)
+        success_lambda.lambda_handler(api_gateway_post_event, context)
+        api_gateway_post_event['path'] = '/successes/{id}'.format(**achievement)
+        api_gateway_post_event['pathParameters'] = {'ID': achievement['id']}
+        api_gateway_post_event['httpMethod'] = 'PUT'
+        api_gateway_post_event['body'] = json.dumps({'cost': 600})
+
+        # PUT
+        results = success_lambda.lambda_handler(api_gateway_post_event, context)
+        assert results['statusCode'] == 200
+
+        # GET
+        api_gateway_post_event['httpMethod'] = 'GET'
+        results = success_lambda.lambda_handler(api_gateway_post_event, context)
+        return_body = json.loads(results['body'])
+        assert return_body['cost'] == 600
+
+        # DELETE
+        api_gateway_post_event['httpMethod'] = 'DELETE'
+        results = success_lambda.lambda_handler(api_gateway_post_event, context)
+        assert results['statusCode'] == 200
+
+    def test_success_lambda_with_id_handler_returns_200(self, api_gateway_post_event, achievement):
+        # POST
+        context = MockLambdaContext()
+        api_gateway_post_event['body'] = json.dumps(achievement)
+        success_lambda.lambda_handler(api_gateway_post_event, context)
+
+        # DELETE
+        api_gateway_post_event['path'] = '/successes/{id}'.format(**achievement)
+        api_gateway_post_event['path'] = '/successes/{id}'.format(**achievement)
+        api_gateway_post_event['pathParameters'] = {'ID': achievement['id']}
+        api_gateway_post_event['httpMethod'] = 'DELETE'
+        results = success_lambda.lambda_handler(api_gateway_post_event, context)
+        assert results['statusCode'] == 200

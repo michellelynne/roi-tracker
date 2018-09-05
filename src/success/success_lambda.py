@@ -1,17 +1,23 @@
 import decimal
 import logging
-import json
+import simplejson as json
 import os
 import time
 from copy import deepcopy
+from datetime import datetime
 
 import boto3
+from botocore.exceptions import ProfileNotFound
 
 AWS_REGION = os.environ['AWS_REGION']
 TABLE_NAME = os.environ['TABLE_NAME']
-os.environ['AWS_PROFILE'] = 'personal'
 
-boto3.setup_default_session(profile_name='personal')
+
+# os.environ['AWS_PROFILE'] = 'personal'
+try:
+    boto3.setup_default_session(profile_name='personal')
+except ProfileNotFound:
+    pass
 dynamodb_client = boto3.resource('dynamodb', region_name=AWS_REGION)
 table = dynamodb_client.Table(TABLE_NAME)
 
@@ -38,36 +44,77 @@ def lambda_handler(event, context):
         return get_handler(event, context)
     elif event['httpMethod'] == 'POST':
         return post_handler(event, context)
+    elif event['httpMethod'] == 'PUT':
+        return put_handler(event, context)
+    elif event['httpMethod'] == 'DELETE':
+        return delete_handler(event, context)
     else:
         raise NotImplementedError()
 
 
 def get_handler(event, context):
     logger.info("Starting lambda handler for GET request.")
-
-    response = table.get_item(
-        Key={
-            'id': 'test_id'
+    path_id = event['pathParameters'].get('ID')
+    if path_id:
+        path_id = int(path_id)
+        db_response = table.get_item(Key={'id': path_id})
+        item = db_response['Item']
+        response = {
+            'statusCode': db_response['ResponseMetadata']['HTTPStatusCode'],
+            'body': json.dumps(item),
+            'isBase64Encoded': False
         }
-    )
-    logger.info('DynamoDB response:')
-    logger.info(response)
-    item = response['Item']
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps({'test':'test'})
-    }
+    else:
+        db_response = table.scan()
+        items = db_response['Items']
+        response = {
+            'statusCode': db_response['ResponseMetadata']['HTTPStatusCode'],
+            'body': json.dumps(items),
+            'isBase64Encoded': False
+        }
+    logger.info('DynamoDB response:{}'.format(db_response['ResponseMetadata']))
+    return response
 
 
 def post_handler(event, context):
-    #TODO: Add created date
     logger.info('Success POST request.')
-    new_item = deepcopy(event['body'])
-    new_item['id'] = int(round(time.time() * 1000))
+    new_item = deepcopy(json.loads(event['body']))
+    if not new_item.get('id'):
+        new_item['id'] = int(round(time.time() * 1000))
+    created_date = datetime.now().isoformat()
+    new_item['created_date'] = created_date
     response = table.put_item(Item=new_item)
     logger.info('Success {} added to table.'.format(new_item['id']))
     return {
         'statusCode': 200,
         'body': json.dumps(response)
     }
+
+
+def put_handler(event, context):
+    logger.info('Success PUT request.')
+    modified_item = deepcopy(json.loads(event['body']))
+    path_id = event['pathParameters'].get('ID')
+    if not modified_item.get('id'):
+        modified_item['id'] = path_id
+    response = table.put_item(Item=modified_item)
+    logger.info('Success {} modified.'.format(modified_item['id']))
+    return {
+        'statusCode': 200,
+        'body': json.dumps(response)
+    }
+
+
+def delete_handler(event, context):
+    logger.info('Success DELETE request.')
+    path_id = event['pathParameters'].get('ID')
+    path_id = int(path_id)
+    db_response = table.delete_item(Key={'id': path_id})
+    response = {
+        'statusCode': db_response['ResponseMetadata']['HTTPStatusCode'],
+        'body': '',
+        'isBase64Encoded': False
+    }
+    logger.info('Success {id} deleted.'.format(id=path_id))
+    return response
+

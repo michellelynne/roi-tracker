@@ -4,7 +4,7 @@ Outputs:
   SuccessApi:
     Description: 'Success API Gateway endpoint URL '
     Value:
-      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageNameParameter}/success/
+      Fn::Sub: https://${SuccessApi}.execute-api.${AWS::Region}.amazonaws.com/${StageNameParameter}/success
   TrackerFunction:
     Description: Success Lambda Function ARN
     Value:
@@ -41,26 +41,219 @@ Resources:
       TableName:
         Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-tracker
     Type: AWS::DynamoDB::Table
+  SuccessApi:
+    Properties:
+      DefinitionBody:
+        basePath: /
+        definitions:
+          Success:
+            properties:
+              cost:
+                description: Cost savings in USD cents.
+                format: int32
+                type: integer
+              duration:
+                description: Length of time saved in seconds.
+                format: int32
+                type: integer
+              employee_multiplier:
+                description: How many employees were doing the action.
+                format: int32
+                type: integer
+              employee_salary:
+                description: Salary of employees in the multiplier.
+                format: int32
+                type: integer
+              id:
+                format: int64
+                type: integer
+              innovation:
+                description: What was created or changed, ie, a tool or process.
+                type: string
+              issue:
+                description: The problem that needed to be solved.
+                type: string
+              recurring:
+                description: How often this action was occurring.
+                enum:
+                - once
+                - daily
+                - weekly
+                - monthly
+                - yearly
+                type: string
+              startDate:
+                description: When in time to start counting the success.
+                format: date-time
+                type: string
+              statement:
+                description: The full written statement to replace generated one.
+                type: string
+            type: object
+        info:
+          title: ROI Tracker
+        paths:
+          /successes:
+            get:
+              description: Returns all successes.
+              operationId: getSuccesses
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: Successful Operation.
+                  schema:
+                    items:
+                      $ref: '#/definitions/Success'
+                    type: array
+              summary: Gets all successes
+              tags:
+              - success
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
+            post:
+              parameters:
+              - in: body
+                name: Provider
+                required: true
+                schema:
+                  $ref: '#/definitions/Success'
+              produces:
+              - application/json
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/definitions/Success'
+                required: true
+              responses:
+                '200':
+                  description: Successful Operation.
+                  schema:
+                    $ref: '#/definitions/Success'
+              tags:
+              - success
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
+              x-amazon-apigateway-request-validator: basic
+          /successes/{ID}:
+            get:
+              description: Returns a single success.
+              operationId: getSuccessById
+              parameters:
+              - description: ID for a success.
+                format: int64
+                in: path
+                name: ID
+                required: true
+                type: integer
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: Successful operation.
+                '400':
+                  description: Invalid ID supplied.
+                '404':
+                  description: Success not found.
+              summary: Find success by ID.
+              tags:
+              - success
+              x-amazon-apigateway-integration:
+                httpMethod: GET
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
+            put:
+              consumes:
+              - application/json
+              description: ''
+              operationId: updateSuccess
+              parameters:
+              - description: ID for a Success.
+                format: int64
+                in: path
+                name: ID
+                required: true
+                type: integer
+              - description: Success object that needs to be updated.
+                in: body
+                name: body
+                required: true
+                schema:
+                  $ref: '#/definitions/Success'
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: Successful operation.
+                  schema:
+                    $ref: '#/definitions/Success'
+                '400':
+                  description: Invalid ID supplied.
+                '404':
+                  description: Success not found.
+                '405':
+                  description: Validation exception.
+              summary: Update an existing success.
+              tags:
+              - success
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
+        schemes:
+        - https
+        swagger: 2.0
+        x-amazon-apigateway-request-validators:
+          basic:
+            validateRequestBody: true
+            validateRequestParameters: true
+      Name:
+        Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-success
+      StageName:
+        Fn::Sub: ${StageNameParameter}
+    Type: AWS::Serverless::Api
   TrackerFunction:
     Properties:
-      CodeUri: s3://mbrenner-roi-tracker/5945493a4255984b560f07f28c946320
+      CodeUri: s3://mbrenner-roi-tracker/677f13fba1538fa25c3569e6a8fadfec
       Environment:
         Variables:
           TABLE_NAME:
             Ref: DynamoDBTable
       Events:
-        GetApiEndpoint:
-          Properties:
-            Method: GET
-            Path: /success
-          Type: Api
-        PostApiEndpoint:
+        PostResoureApiEndpoint:
           Properties:
             Method: POST
-            Path: /success
+            Path: /successes
+            RestApiId:
+              Ref: SuccessApi
           Type: Api
       FunctionName:
-        Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-success
+        Fn::Sub: ${ServiceNameParameter}-${StageNameParameter}-tracker
       Handler: success_lambda.lambda_handler
       Policies:
       - Statement:
