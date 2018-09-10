@@ -12,12 +12,11 @@ from botocore.exceptions import ProfileNotFound
 AWS_REGION = os.environ['AWS_REGION']
 TABLE_NAME = os.environ['TABLE_NAME']
 
-
-# os.environ['AWS_PROFILE'] = 'personal'
 try:
     boto3.setup_default_session(profile_name='personal')
 except ProfileNotFound:
     pass
+
 dynamodb_client = boto3.resource('dynamodb', region_name=AWS_REGION)
 table = dynamodb_client.Table(TABLE_NAME)
 
@@ -53,8 +52,11 @@ def lambda_handler(event, context):
 
 
 def get_handler(event, context):
-    logger.info("Starting lambda handler for GET request.")
-    path_id = event['pathParameters'].get('ID')
+    logger.info('Starting lambda handler for GET request.')
+    path_parameters = event.get('pathParameters')
+    path_id = None
+    if path_parameters:
+        path_id = path_parameters.get('ID')
     if path_id:
         path_id = int(path_id)
         db_response = table.get_item(Key={'id': path_id})
@@ -81,8 +83,9 @@ def post_handler(event, context):
     new_item = deepcopy(json.loads(event['body']))
     if not new_item.get('id'):
         new_item['id'] = int(round(time.time() * 1000))
-    created_date = datetime.now().isoformat()
-    new_item['created_date'] = created_date
+    if not new_item.get('start_date'):
+        start_date = datetime.now().isoformat()
+        new_item['start_date'] = start_date
     response = table.put_item(Item=new_item)
     logger.info('Success {} added to table.'.format(new_item['id']))
     return {

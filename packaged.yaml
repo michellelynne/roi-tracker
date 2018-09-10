@@ -61,7 +61,7 @@ Resources:
                 format: int32
                 type: integer
               employee_salary:
-                description: Salary of employees in the multiplier.
+                description: Salary of employees in the multiplier in dollars/year.
                 format: int32
                 type: integer
               id:
@@ -93,6 +93,47 @@ Resources:
         info:
           title: ROI Tracker
         paths:
+          /report:
+            get:
+              description: Returns a report of success.
+              operationId: getReport
+              parameters:
+              - description: Start date for report.
+                in: query
+                name: start
+                schema:
+                  type: string
+              - description: End date for report.
+                in: query
+                name: end
+                schema:
+                  type: string
+              - description: The numbers of items to return.
+                in: query
+                name: limit
+                schema:
+                  type: integer
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: Successful operation.
+                '400':
+                  description: Invalid query supplied.
+                '404':
+                  description: Report not found.
+              summary: Gets a report of successes
+              tags:
+              - report
+              x-amazon-apigateway-integration:
+                httpMethod: GET
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
           /successes:
             get:
               description: Returns all successes.
@@ -110,7 +151,7 @@ Resources:
               tags:
               - success
               x-amazon-apigateway-integration:
-                httpMethod: POST
+                httpMethod: GET
                 passthroughBehavior: when_no_match
                 responses:
                   default:
@@ -151,6 +192,43 @@ Resources:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
               x-amazon-apigateway-request-validator: basic
           /successes/{ID}:
+            delete:
+              consumes:
+              - application/json
+              description: ''
+              operationId: updateSuccess
+              parameters:
+              - description: ID for a Success.
+                format: int64
+                in: path
+                name: ID
+                required: true
+                type: integer
+              produces:
+              - application/json
+              responses:
+                '200':
+                  description: Successful operation.
+                  schema:
+                    $ref: '#/definitions/Success'
+                '400':
+                  description: Invalid ID supplied.
+                '404':
+                  description: Success not found.
+                '405':
+                  description: Validation exception.
+              summary: Update an existing success.
+              tags:
+              - success
+              x-amazon-apigateway-integration:
+                httpMethod: DELETE
+                passthroughBehavior: when_no_match
+                responses:
+                  default:
+                    statusCode: 200
+                type: aws_proxy
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations
             get:
               description: Returns a single success.
               operationId: getSuccessById
@@ -217,7 +295,7 @@ Resources:
               tags:
               - success
               x-amazon-apigateway-integration:
-                httpMethod: POST
+                httpMethod: PUT
                 passthroughBehavior: when_no_match
                 responses:
                   default:
@@ -239,12 +317,19 @@ Resources:
     Type: AWS::Serverless::Api
   TrackerFunction:
     Properties:
-      CodeUri: s3://mbrenner-roi-tracker/677f13fba1538fa25c3569e6a8fadfec
+      CodeUri: s3://mbrenner-roi-tracker/e1c526cd68de4727496bd45a569ef0ad
       Environment:
         Variables:
           TABLE_NAME:
             Ref: DynamoDBTable
       Events:
+        GetApiEndpoint:
+          Properties:
+            Method: GET
+            Path: /successes
+            RestApiId:
+              Ref: SuccessApi
+          Type: Api
         PostResoureApiEndpoint:
           Properties:
             Method: POST
