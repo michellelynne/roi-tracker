@@ -30,8 +30,8 @@ File structure:
 ##### Create a new virtualenv in the roi-tracker directory and activate it. Pipenv will output the virtualenv location.
 ```bash
 cd roi-tracker
-pipenv --python 3
-source /Users/$user_name/.local/share/virtualenvs/roi-tracker-XY3n3ylQ/bin/activate
+pipenv --python 3.6
+pipenv shell
 ```
 ##### Install AWS CLI, AWS SAM CLI and Docker
 ```bash
