@@ -3,28 +3,9 @@
 This a tool to track your successes over time and provide business reports.
 It runs on AWS and can be deployed to run on your own account.
 
-
-File structure:
-
-```bash
-.
-├── src                         <-- Source code for a lambda functions
-│   ├── __init__.py
-│   ├── success
-│   │   ├── __init__.py
-│   │   └── success_lambda.py    <-- Success Lambda function code
-├── README.md                   <-- This readme file
-├── requirements-dev.txt        <-- Python development dependencies, needed to run tests
-├── setup.cfg                   <-- Project config file, currently has only flake8 settings
-├── template.yaml               <-- SAM template with infrastructure setup
-└── tests                       <-- Unit tests
-    ├── __init__.py
-    └── test_handler.py
-```
-
 ## Prerequisites
 
-* [Python 3](https://www.python.org/downloads/)
+* [Python 3.6](https://www.python.org/downloads/)
 * [Pipenv](http://docs.python-guide.org/en/latest/dev/virtualenvs/)
 
 ##### Create a new virtualenv in the roi-tracker directory and activate it. Pipenv will output the virtualenv location.
