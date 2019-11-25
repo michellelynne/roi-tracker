@@ -65,6 +65,7 @@ Resources:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
+                - dynamodb:Scan
               Resource: !GetAtt "DynamoDBTable.Arn"
 
 
@@ -94,6 +95,7 @@ Resources:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
+                - dynamodb:Scan
               Resource: !GetAtt "DynamoDBTable.Arn"
 
 
@@ -123,8 +125,6 @@ Resources:
                 required: true
                 schema:
                   "$ref": "#/definitions/Success"
-              tags:
-              - "success"
               produces:
               - application/json
               responses:
@@ -282,47 +282,6 @@ Resources:
                   Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations"
                 passthroughBehavior: when_no_match
                 httpMethod: DELETE
-                type: aws_proxy
-          /report:
-            get:
-              tags:
-              - "report"
-              summary: "Gets a report of successes"
-              description: "Returns a report of success."
-              operationId: "getReport"
-              produces:
-              - "application/json"
-              parameters:
-              - in: query
-                name: start
-                schema:
-                  type: string
-                description: "Start date for report."
-              - in: query
-                name: end
-                schema:
-                  type: string
-                description: "End date for report."
-              - in: query
-                name: limit
-                schema:
-                  type: integer
-                description: "The numbers of items to return."
-              responses:
-                '200':
-                  description: "Successful operation."
-                '400':
-                  description: "Invalid query supplied."
-                '404':
-                  description: "Report not found."
-              x-amazon-apigateway-integration:
-                responses:
-                  default:
-                    statusCode: 200
-                uri:
-                  Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TrackerFunction.Arn}/invocations"
-                passthroughBehavior: when_no_match
-                httpMethod: GET
                 type: aws_proxy
         definitions:
           Success:

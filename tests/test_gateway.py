@@ -275,7 +275,7 @@ class TestReportLambda:
         assert get_all_statements(achievements[:4]) == expected_statements
 
     def test_get_total_employee_salary_saved(self, achievements):
-        expected_total_employee_salary_saved = 320547945.21
+        expected_total_employee_salary_saved = 15565.13
         total_employee_salary_saved = get_total_employee_salary_saved(achievements)
         assert total_employee_salary_saved == expected_total_employee_salary_saved
 
@@ -332,7 +332,7 @@ class TestReportLambda:
             'statusCode': 200,
             'body':
                 '{"total_cost_saved": 10000.0, "total_time_saved": 10800.0,'
-                ' "total_employee_salary_saved": 147945205.48, '
+                ' "total_employee_salary_saved": 7183.91, '
                 '"statements": ["Created library to eliminate need for 3rd party service, saving $100.0 once.",'
                 ' "Created automated report to eliminate need of manual report creation, saving 30 minutes daily."]}',
             'isBase64Encoded': False}

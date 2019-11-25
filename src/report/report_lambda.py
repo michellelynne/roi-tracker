@@ -76,8 +76,10 @@ def get_total_employee_salary_saved(successes, end=datetime.now()):
         if success['employee_multiplier'] and success['employee_salary']:
             days_active = get_days_active(success, end=datetime.now())
             time_saved = float(success['duration']) * days_active
-            salary_per_day_in_cents = (float(success['employee_salary']) * 100) / 365
-            employee_savings = salary_per_day_in_cents * float(success['employee_multiplier'])
+            seconds_in_work_day = 3600 * 8
+            working_days = 261
+            salary_per_second_in_cents = float((((success['employee_salary']) * 100) / working_days) / seconds_in_work_day)
+            employee_savings = salary_per_second_in_cents * float(success['employee_multiplier'])
             employee_savings *= time_saved
             total_employee_savings += employee_savings
     return round(total_employee_savings, 2)
@@ -96,7 +98,10 @@ def get_days_active(success, end=datetime.now()):
         int: Days this success was active.
 
     """
-    start_date = datetime.strptime(success['start_date'], '%Y-%m-%dT%H:%M:%S.%f')
+    try:
+        start_date = datetime.strptime(success['start_date'], '%Y-%m-%dT%H:%M:%S.%f')
+    except ValueError:
+        start_date = datetime.strptime(success['start_date'], '%Y-%m-%dT%H:%M:%SZ')
     days_active = end - start_date
     days_active = days_active.days
     if success['recurring'] == 'once':
@@ -179,9 +184,13 @@ def get_handler(event, context):
 
 def get_database_response(event):
     query_string = event.get('queryStringParameters')
-    start = query_string.get('start')
-    end = query_string.get('end')
-    limit = query_string.get('limit', 500)
+    start = None
+    end = None
+    limit = 500
+    if query_string:
+        start = query_string.get('start')
+        end = query_string.get('end')
+        limit = query_string.get('limit', 500)
 
     if not end:
         end = datetime.now().isoformat()
